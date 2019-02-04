@@ -29,7 +29,7 @@ function _debug {
 }
 
 function _fatal {
-	echo -E "$OPTPNAME: Fatal: " "$@" 1>&2
+	echo -E "$OPTPNAME: Fatal:" "$@" 1>&2
 	exit 1
 }
 
@@ -77,6 +77,7 @@ Options:
 	-t {days}	how many days to look back. Default is $DAYS_DFLT
 
 	-u {userid}	the login to be used for the query; default is $INFLUXDB_USER_DFLT.
+
 .
 }
 
@@ -127,6 +128,9 @@ done
 #### get rid of scanned options ####
 shift $((OPTIND - 1))
 
+if [[ $# != 0 ]]; then
+	_fatal "extra arguments:" "$@"
+fi
 
 if [[ $PRETTY -ne 0 ]]; then
 	INFLUXDB_OPTPRETTY="pretty=true"
