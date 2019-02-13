@@ -48,7 +48,7 @@ function json_getbson(sJson)
 	sBson = gsub(sBson, "%]", "}");
 	// 2) convert "string": to [ "string" ] =
 	sBson = gsub(sBson, "(\"[^\"]*\")%s*:", "[ %1 ] =" )
-	return "return "..sBson;
+	return sBson;
 	}
 
 function filetostring(sF)
@@ -125,7 +125,7 @@ function main(args)
 		exit(1);
 		}
 
-	local tBson = dostring(json_getbson(sJson));
+	local tBson = dostring("return ".. json_getbson(sJson));
 
 	local tSeries = tBson.results[0].series[0];
 
