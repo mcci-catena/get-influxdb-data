@@ -156,10 +156,10 @@ else
 	INFLUXDB_OPTPRETTY="pretty=false"
 fi
 
-#### calculate the vars from the query. input is a comma-separated list of specs. 
+#### calculate the vars from the query. input is a comma-separated list of specs.
 #### each spec is either a simple name, or 'expr as label'
 function _expandquery {
-	{ printf "%s\n" "$@" | 
+	{ printf "%s\n" "$@" |
 		awk 'BEGIN { FS=","; OFS="," }
 		     { for (i=1; i <= NF; ++i)
 		     	{

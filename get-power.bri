@@ -52,13 +52,13 @@ function json_getbson(sJson)
 	}
 
 function filetostring(sF)
-	{ 
+	{
 	local hFile, sError;
-	hFile, sError = openfile(sF, "r"); 
-	if (hFile == NULL) return NULL, sError; 
-	local sResult; 
-	sResult, sError=read(hFile, "*a"); 
-	closefile(hFile); 
+	hFile, sError = openfile(sF, "r");
+	if (hFile == NULL) return NULL, sError;
+	local sResult;
+	sResult, sError=read(hFile, "*a");
+	closefile(hFile);
 	return sResult, sError;
 	}
 
@@ -83,7 +83,7 @@ function getPower(tSeries, sVar, kRollover)
 		if (tValues[i][iVar] < tValues[i-1][iVar])
 			nRollovers = nRollovers + 1;
 		}
-	
+
 	local nTotalPower;
 
 	nTotalPower = nRollovers * 65536 * kRollover + tValues[getn(tValues)-1][iVar] - tValues[0][iVar];
@@ -130,8 +130,8 @@ function main(args)
 	local tSeries = tBson.results[0].series[0];
 	local nPower, sStart, sEnd = getPower(tSeries, sVar, kRollover);
 
-	write(_STDOUT, format("Power used: Device %s Series %s: %.5f MWh from %s to %s\n", 
-				tSeries.tags.devID, sVar, 
+	write(_STDOUT, format("Power used: Device %s Series %s: %.5f MWh from %s to %s\n",
+				tSeries.tags.devID, sVar,
 				nPower / 1e6,
 				sStart, sEnd
 				)
