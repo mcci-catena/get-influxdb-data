@@ -88,7 +88,7 @@ function getPower(tSeries, sVar, kRollover)
 
 	nTotalPower = nRollovers * 65536 * kRollover + tValues[getn(tValues)-1][iVar] - tValues[0][iVar];
 
-	return nTotalPower
+	return nTotalPower, tValues[0][0], tValues[getn(tValues)-1][0];
 	}
 
 function main(args)
@@ -128,8 +128,14 @@ function main(args)
 	local tBson = dostring("return ".. json_getbson(sJson));
 
 	local tSeries = tBson.results[0].series[0];
+	local nPower, sStart, sEnd = getPower(tSeries, sVar, kRollover);
 
-	write(_STDOUT, format("Power used: %s.%s: %.5f MWh\n", tSeries.tags.devID, sVar, getPower(tSeries, sVar, kRollover)/1e6));
+	write(_STDOUT, format("Power used: Device %s Series %s: %.5f MWh from %s to %s\n", 
+				tSeries.tags.devID, sVar, 
+				nPower / 1e6,
+				sStart, sEnd
+				)
+	     );
 
 	return 0;
 	}
