@@ -39,10 +39,14 @@ typeset -r INFLUXDB_SERVER_DFLT="ithaca-power.mcci.com"
 typeset -r INFLUXDB_DB_DFLT="iseechange-01"
 typeset -r INFLUXDB_SERIES_DFLT="HeatData"
 typeset -r INFLUXDB_USER_DFLT="nobody"
+typeset -r INFLUXDB_QUERY_VARS_DFLT='t,rh,tDew,mean("tHeatData") as "tHeatIndex",p,vBat'
+typeset -r INFLUXDB_QUERY_WHERE_DFLT='time > now() - 1d'
+typeset -r INFLUXDB_QUERY_GROUP_DFLT='time(1ms), "displayName"'
+
 typeset -i DAYS_DFLT=1
 
 #### argument scanning:  usage ####
-typeset -r USAGE="${PNAME} -[Dhpv d* O* S* s* t* u*]"
+typeset -r USAGE="${PNAME} -[Dhpv d* g* q* S* s* t* u* w*]"
 
 # produce the help message.
 function _help {
@@ -68,7 +72,13 @@ Options:
 
 	-d {database}	the database within the server; default is $INFLUXDB_DB_DFLT.
 
+	-g {group}	the group clause. Default is $INFLUXDB_QUERY_GROUP_DFLT.
+
 	-p		pretty-print the output; -np minifies the output.
+
+	-q {vars}	the variables to query. Default is:
+
+			$INFLUXDB_QUERY_VARS_DFLT
 
 	-S {fqdn}	domain name of server; default is $INFLUXDB_SERVER_DFLT.
 
@@ -78,6 +88,7 @@ Options:
 
 	-u {userid}	the login to be used for the query; default is $INFLUXDB_USER_DFLT.
 
+	-w {where}	the where clause. Default: $INFLUXDB_QUERY_WHERE_DFLT
 .
 }
 
@@ -88,10 +99,13 @@ typeset INFLUXDB_SERVER="$INFLUXDB_SERVER_DFLT"
 typeset INFLUXDB_DB="$INFLUXDB_DB_DFLT"
 typeset INFLUXDB_SERIES="$INFLUXDB_SERIES_DFLT"
 typeset INFLUXDB_USER="$INFLUXDB_USER_DFLT"
+typeset INFLUXDB_QUERY_GROUP="$INFLUXDB_QUERY_GROUP_DFLT"
+typeset INFLUXDB_QUERY_VARS="$INFLUXDB_QUERY_VARS_DFLT"
+typeset INFLUXDB_QUERY_WHERE="$INFLUXDB_QUERY_WHERE_DFLT"
 typeset -i DAYS=$DAYS_DFLT
 
 typeset -i NEXTBOOL=1
-while getopts hvnDd:pS:s:t:u: c
+while getopts hvnDd:g:pq:S:s:t:u:w: c
 do
 	if [ $NEXTBOOL -eq -1 ]; then
 		NEXTBOOL=0
@@ -111,15 +125,19 @@ do
 	n)	NEXTBOOL=-1;;
 	v)	OPTVERBOSE=$NEXTBOOL;;
 	d)	INFLUXDB_DB="$OPTARG";;
+	g)	INFLUXDB_QUERY_GROUP="$OPTARG";;
 	p)	PRETTY=$NEXTBOOL;;
+	q)	INFLUXDB_QUERY_VARS="$OPTARG";;
 	S)	INFLUXDB_SERVER="$OPTARG";;
 	s)	INFLUXDB_SERIES="$OPTARG";;
 	t)	DAYS="$OPTARG"
 		if [[ "$DAYS" != "$OPTARG" ]]; then
 			_fatal "-t #: not a valid number of days: $OPTARG"
 		fi
+		INFLUXDB_QUERY_WHERE="time > now() - ${DAYS}d"
 		;;
 	u)	INFLUXDB_USER="$OPTARG";;
+	w)	INFLUXDB_QUERY_WHERE="$OPTARG";;
 	\?)	echo "$USAGE"
 		exit 1;;
 	esac
@@ -138,28 +156,34 @@ else
 	INFLUXDB_OPTPRETTY="pretty=false"
 fi
 
+#### calculate the vars from the query. input is a comma-separated list of specs. 
+#### each spec is either a simple name, or 'expr as label'
+function _expandquery {
+	{ printf "%s\n" "$@" | 
+		awk 'BEGIN { FS=","; OFS="," }
+		     { for (i=1; i <= NF; ++i)
+		     	{
+			if ($i ~ /^[a-zA-Z0-9_-]+$/)
+				$i = "mean(\"" $i "\") as \"" $i "\""
+		     	}
+			print;
+		     }
+		' ; } || _fatal "_expandquery failed:" "$@"
+}
+
+typeset QUERY_VAR_STRING
+_expandquery "$INFLUXDB_QUERY_VARS" >/dev/null
+QUERY_VAR_STRING="$(_expandquery "$INFLUXDB_QUERY_VARS")"
+
+typeset QUERY_STRING='SELECT '"${QUERY_VAR_STRING}"' from "'"${INFLUXDB_SERIES}"'" where '"${INFLUXDB_QUERY_WHERE}"' GROUP BY '"${INFLUXDB_QUERY_GROUP} fill(none)" || _fatal "_expandquery failed"
 _verbose curl -G --basic --user "${INFLUXDB_USER}" \
 	"https://${INFLUXDB_SERVER}/influxdb:8086/query?${INFLUXDB_OPTPRETTY}" \
 	--data-urlencode "db=${INFLUXDB_DB}" \
-	--data-urlencode 'q=SELECT 
-		mean("t")	 	as "t", 
-		mean("rh")		as "rh",
-		mean("tDew")		as "tDew",
-		mean("tHeatData")	as "tHeatIndex",
-		mean("p")		as "p",
-		mean("vBat")		as "vBat"
-		 from "'"${INFLUXDB_SERIES}"'" where time > now() - '$DAYS'd GROUP BY time(1ms), "displayName" fill(none)'
+	--data-urlencode "q=$QUERY_STRING"
 
 curl -G --basic --user "${INFLUXDB_USER}" \
 	"https://${INFLUXDB_SERVER}/influxdb:8086/query?${INFLUXDB_OPTPRETTY}" \
 	--data-urlencode "db=${INFLUXDB_DB}" \
-	--data-urlencode 'q=SELECT 
-		mean("t")	 	as "t", 
-		mean("rh")		as "rh",
-		mean("tDew")		as "tDew",
-		mean("tHeatData")	as "tHeatIndex",
-		mean("p")		as "p",
-		mean("vBat")		as "vBat"
-		 from "'"${INFLUXDB_SERIES}"'" where time > now() - '$DAYS'd GROUP BY time(1ms), "displayName" fill(none)'
+	--data-urlencode "q=$QUERY_STRING"
 
 # end of file
