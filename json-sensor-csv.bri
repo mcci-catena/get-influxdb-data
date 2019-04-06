@@ -31,7 +31,7 @@ if (!(.COPYRIGHT in globals()))
 || Load MCCI Bright Library -- This can come from environment MCCIBRIGHT_LIB
 || (conforming to the Windows MCCIConf naming conventions).
 ||
-|| Also compatible with the library existing in the current directory or 
+|| Also compatible with the library existing in the current directory or
 || already loaded.
 */
 if(!(.Lib in globals()))
@@ -80,14 +80,14 @@ function json_getbson(sJson)
 	sBson = gsub(sBson, "%]", "}");
 	// 2) convert "string": to [ "string" ] =
 	sBson = gsub(sBson, "(\"[^\"]*\")%s*:", "[ %1 ] =" )
-	sBson = gsub(sBson, "([^\"]*)(\"[^\"]*\")", 
+	sBson = gsub(sBson, "([^\"]*)(\"[^\"]*\")",
 			function (notString, String)
 				{
 				return gsub(notString, "(%W)null(%W)", "%1NULL%2")..String;
 				}
 			);
 	sBson = gsub(sBson, "\"([^\"]*)$",
-			function(notString) 
+			function(notString)
 				{
 				return "\""..gsub(notString, "(%W)null(%W)", "%1NULL%2");
 				});
@@ -113,7 +113,7 @@ function interpolateHeaders(tRow)
 
 	for i=0, iHeader-1 do
 		tHeader[i] = tRow[i];	// copy time.
-	
+
 	nHeader = iHeader;
 
 	for i=1, iHeader-1 do
@@ -160,7 +160,7 @@ function getHourlyData(tData, iStart, iEnd, nHeader)
 		// (y-y0)/dy = (t-t0)/dt
 		// y-y0 = (t - t0) * dy/dt
 		// y = dy/dt * (t - t0) + y0
-		
+
 		tResult[0] = tThisHour;
 		for i = 1, nHeader - 1 do
 			{
@@ -189,7 +189,7 @@ function getHourlyData(tData, iStart, iEnd, nHeader)
 		for i = 1, getn(tRow) - 1 do
 			{
 			local tCandidate;
-			
+
 			if (i in tRow)
 				tCandidate = tRow[i];
 			else
@@ -255,7 +255,7 @@ function putRow(tRow)
 	s = "";
 	for i = 0, getn(tRow)-1 do
 		{
-		s = s .. 
+		s = s ..
 			(i > 0 ? "," : "") ..
 			csvQuote(tRow[i]);
 		}
