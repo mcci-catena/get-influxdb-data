@@ -14,12 +14,8 @@ Author:
 	Terry Moore, MCCI Corporation
 
 Description:
-	This function compensates for the limited resolution of over-the-air
-	and in-database power kWh counts, by searching the database looking for
-	roll-overs (where the next count is less than the previous count). The
-	count is then multiplied by the maximum and added to the last value,
-	giving the "end value". The beginning value is then subtracted, giving
-	the total.
+	This function extracts data from an influxdb JSON file generated
+	from the I See Change data set for a given sensor.
 
 */
 
@@ -109,34 +105,148 @@ function filetostring(sF)
 	return sResult, sError;
 	}
 
-function getPower(tSeries, sVar, kRollover)
+function interpolateHeaders(tRow)
 	{
-	// find index of powerUsed
-	for iName, vName in tSeries.columns do
+	local iHeader = getn(tRow);
+	local nHeader;
+	local tHeader = {};
+
+	for i=0, iHeader-1 do
+		tHeader[i] = tRow[i];	// copy time.
+	
+	nHeader = iHeader;
+
+	for i=1, iHeader-1 do
 		{
-		if (vName == sVar)
+		tHeader[iHeader + 0] = tRow[i] .. " (min)";
+		tHeader[iHeader + 1] = tRow[i] .. " (max)";
+		iHeader = iHeader + 2;
+		}
+
+	return tHeader, nHeader;
+	}
+
+function findHour(tData, iStart)
+	{
+	local hour = floor(tData[iStart][0] * 24);
+	local lastt = (hour + 1) / 24;
+	local lasti = getn(tData) - 1;
+
+	for i = iStart + 1, lasti do
+		{
+		if (tData[i][0] >= lastt)
+			return i - 1;
+		}
+
+	return lasti;
+	}
+
+function getHourlyData(tData, iStart, iEnd, nHeader)
+	{
+	local tResult = {};
+
+	// fill in hourly data
+	if (iEnd < getn(tData) - 1)
+		{
+		local tPrev = tData[iEnd];
+		local tThis = tData[iEnd+1];
+
+		local tThisTime = tThis[0];
+		local tLastTime = tPrev[0];
+		local dt = tThisTime - tLastTime;
+		local tThisHour = floor(tThisTime * 24) / 24;
+		local delta_tHour = tThisHour - tLastTime;
+
+		// (y-y0)/dy = (t-t0)/dt
+		// y-y0 = (t - t0) * dy/dt
+		// y = dy/dt * (t - t0) + y0
+		
+		tResult[0] = tThisHour;
+		for i = 1, nHeader - 1 do
 			{
-			iVar = iName;
-			break;
+			if (i in tThis && i in tPrev && tThis[i] != NULL && tPrev[i] != NULL)
+				{
+				local y0 = tPrev[i];
+				local dy = tThis[i] - y0;
+				tResult[i] = y0 + dy / dt * delta_tHour ;
+				}
+			else
+				tResult[i] = NULL;
+			}
+		}
+	else
+		{
+		local tThis = tData[iEnd];
+
+		for i = 0, nHeader - 1 do
+			tResult[i] = tThis[i];
+		}
+
+	for iRow=iStart, iEnd do
+		{
+		local tRow = tData[iRow];
+
+		for i = 1, getn(tRow) - 1 do
+			{
+			local tCandidate;
+			
+			if (i in tRow)
+				tCandidate = tRow[i];
+			else
+				tCandidate = NULL;
+			for k = 0, 1 do
+				{
+				local j = nHeader + 2 * (i - 1) + k;
+				local tVal;
+
+				// set starting value
+				if (j in tResult)
+					tVal = tResult[j];
+				else
+					tVal = NULL;
+
+				// k even: min; odd: max
+				if (tVal == NULL)
+					tVal = tCandidate;
+				else if (tCandidate != NULL)
+					{
+					if (k == 0)
+						{
+						if (tVal > tCandidate)
+							tVal = tCandidate;
+						}
+					else
+						{
+						if (tVal < tCandidate)
+							tVal = tCandidate;
+						}
+					}
+
+				tResult[j] = tVal;
+				}
 			}
 		}
 
-	local tValues = tSeries.values;
-
-	local nRollovers = 0;
-
-	for i = 1, getn(tValues)-1 do
-		{
-		if (tValues[i][iVar] < tValues[i-1][iVar])
-			nRollovers = nRollovers + 1;
-		}
-
-	local nTotalPower;
-
-	nTotalPower = nRollovers * 65536 * kRollover + tValues[getn(tValues)-1][iVar] - tValues[0][iVar];
-
-	return nTotalPower, tValues[0][0], tValues[getn(tValues)-1][0];
+	return tResult;
 	}
+
+/*
+
+Name:	putRow()
+
+Function:
+	Output a row to the STDOUT.
+
+Definition:
+	function putRow(TABLE tRow) => NULL or STRING
+
+Description:
+	The data is output as a properly-formatted CSV string.
+
+Returns:
+	putRow() returns whatever the terminal write() returns.
+
+*/
 
 function putRow(tRow)
 	{
@@ -150,7 +260,7 @@ function putRow(tRow)
 			csvQuote(tRow[i]);
 		}
 
-	write(_STDOUT, s.."\n");
+	return write(_STDOUT, s.."\n");
 	}
 
 function csvQuote(v)
@@ -218,8 +328,9 @@ function main(args)
 			}
 		}
 	local tSeries = tAllSeries[iSeries];
+	local tHeader, nHeader = interpolateHeaders(tSeries.columns);
 
-	putRow(tSeries.columns);
+	putRow(tHeader);
 
 	// we know column[0] is the time; we'll output as an excel date
 	// the UTC epoch is 25569 for Excel
@@ -238,8 +349,20 @@ function main(args)
 			}
 
 		row[0] = (%Lib.ParsedDateToPosix(tDate)/(24*60*60) + excelEpoch);
+		}
 
-		putRow(row);
+	// output blocks of hourly data, preceded by summary
+	local iFirst = 0;
+	while (iFirst < getn(tValues))
+		{
+		local iLast = findHour(tValues, iFirst);
+
+		for i = iFirst, iLast do
+			putRow(tValues[i]);
+
+		putRow(getHourlyData(tValues, iFirst, iLast, nHeader));
+
+		iFirst = iLast + 1;
 		}
 
 	return 0;
