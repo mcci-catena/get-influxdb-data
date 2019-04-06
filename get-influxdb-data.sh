@@ -42,11 +42,11 @@ typeset -r INFLUXDB_USER_DFLT="nobody"
 typeset -r INFLUXDB_QUERY_VARS_DFLT='t,rh,tDew,mean("tHeatData") as "tHeatIndex",p,vBat'
 typeset -r INFLUXDB_QUERY_WHERE_DFLT='time > now() - 1d'
 typeset -r INFLUXDB_QUERY_GROUP_DFLT='time(1ms), "displayName"'
-
+typeset -r INFLUXDB_QUERY_FILL_DFLT="none"
 typeset -i DAYS_DFLT=1
 
 #### argument scanning:  usage ####
-typeset -r USAGE="${PNAME} -[Dhpv d* g* q* S* s* t* u* w*]"
+typeset -r USAGE="${PNAME} -[Dhpv d* f* g* q* S* s* t* u* w*]"
 
 # produce the help message.
 function _help {
@@ -71,6 +71,9 @@ Options:
 	-D		operate in debug mode.
 
 	-d {database}	the database within the server; default is $INFLUXDB_DB_DFLT.
+
+	-f {fill}	the fill value. -f- means no fill clause. Default is
+			$INFLUXDB_QUERY_FILL_DFLT
 
 	-g {group}	the group clause. Default is $INFLUXDB_QUERY_GROUP_DFLT.
 
@@ -99,13 +102,14 @@ typeset INFLUXDB_SERVER="$INFLUXDB_SERVER_DFLT"
 typeset INFLUXDB_DB="$INFLUXDB_DB_DFLT"
 typeset INFLUXDB_SERIES="$INFLUXDB_SERIES_DFLT"
 typeset INFLUXDB_USER="$INFLUXDB_USER_DFLT"
+typeset INFLUXDB_QUERY_FILL="$INFLUXDB_QUERY_FILL_DFLT"
 typeset INFLUXDB_QUERY_GROUP="$INFLUXDB_QUERY_GROUP_DFLT"
 typeset INFLUXDB_QUERY_VARS="$INFLUXDB_QUERY_VARS_DFLT"
 typeset INFLUXDB_QUERY_WHERE="$INFLUXDB_QUERY_WHERE_DFLT"
 typeset -i DAYS=$DAYS_DFLT
 
 typeset -i NEXTBOOL=1
-while getopts hvnDd:g:pq:S:s:t:u:w: c
+while getopts hvnDd:f:g:pq:S:s:t:u:w: c
 do
 	if [ $NEXTBOOL -eq -1 ]; then
 		NEXTBOOL=0
@@ -125,6 +129,7 @@ do
 	n)	NEXTBOOL=-1;;
 	v)	OPTVERBOSE=$NEXTBOOL;;
 	d)	INFLUXDB_DB="$OPTARG";;
+	f)	INFLUXDB_QUERY_FILL="$OPTARG";;
 	g)	INFLUXDB_QUERY_GROUP="$OPTARG";;
 	p)	PRETTY=$NEXTBOOL;;
 	q)	INFLUXDB_QUERY_VARS="$OPTARG";;
@@ -175,7 +180,14 @@ typeset QUERY_VAR_STRING
 _expandquery "$INFLUXDB_QUERY_VARS" >/dev/null
 QUERY_VAR_STRING="$(_expandquery "$INFLUXDB_QUERY_VARS")"
 
-typeset QUERY_STRING='SELECT '"${QUERY_VAR_STRING}"' from "'"${INFLUXDB_SERIES}"'" where '"${INFLUXDB_QUERY_WHERE}"' GROUP BY '"${INFLUXDB_QUERY_GROUP} fill(none)" || _fatal "_expandquery failed"
+typeset QUERY_FILL_STRING
+if [[ "$INFLUXDB_QUERY_FILL" != "-" ]]; then
+	QUERY_FILL_STRING=" fill($INFLUXDB_QUERY_FILL)"
+else
+	QUERY_FILL_STRING=
+fi
+
+typeset QUERY_STRING='SELECT '"${QUERY_VAR_STRING}"' from "'"${INFLUXDB_SERIES}"'" where '"${INFLUXDB_QUERY_WHERE}"' GROUP BY '"${INFLUXDB_QUERY_GROUP}${QUERY_FILL_STRING}" || _fatal "_expandquery failed"
 _verbose curl -G --basic --user "${INFLUXDB_USER}" \
 	"https://${INFLUXDB_SERVER}/influxdb:8086/query?${INFLUXDB_OPTPRETTY}" \
 	--data-urlencode "db=${INFLUXDB_DB}" \
