@@ -52,7 +52,7 @@ typeset -r USAGE="${PNAME} -[Dhpv d* f* g* q* S* s* t* u* w*]"
 function _help {
 	more 1>&2 <<.
 
-Name:	$PNAME
+Name:	$OPTPNAME
 
 Function:
 	Get influx data from specified server, as json.
@@ -70,7 +70,7 @@ Options:
 
 	-D		operate in debug mode.
 
-	-d {database}	the database within the server; default is $INFLUXDB_DB_DFLT.
+	-d {database}	the database within the server; default: $INFLUXDB_DB_DFLT.
 
 	-f {fill}	the fill value. -f- means no fill clause. Default is
 			$INFLUXDB_QUERY_FILL_DFLT
@@ -85,13 +85,42 @@ Options:
 
 	-S {fqdn}	domain name of server; default is $INFLUXDB_SERVER_DFLT.
 
-	-s {series}	data series name; default is $INFLUXDB_SERIES_DEFAULT
+	-s {series}	data series name; default is $INFLUXDB_SERIES_DFLT
 
 	-t {days}	how many days to look back. Default is $DAYS_DFLT
 
 	-u {userid}	the login to be used for the query; default is $INFLUXDB_USER_DFLT.
 
 	-w {where}	the where clause. Default: $INFLUXDB_QUERY_WHERE_DFLT
+
+Positional arguments:
+	No positional arguments are availalbe.
+
+Examples:
+	To fetch the last 36 days as user somebody from default source and
+	series, do the following. (The -v option causes the script to display
+	the curl command.)
+
+	\$ $OPTPNAME -u somebody -v -t36 > /tmp/data.json
+	get-influxdb-data.sh: curl -G --basic --user somebody https://ithaca-power.mcci.com/influxdb:8086/query?pretty=true --data-urlencode db=iseechange-01 --data-urlencode q=SELECT mean("t") as "t",mean("rh") as "rh",mean("tDew") as "tDew",mean("tHeatData") as "tHeatIndex",mean("p") as "p",mean("vBat") as "vBat" from "HeatData" where time > now() - 36d GROUP BY time(1ms), "displayName" fill(none)
+	Enter host password for user 'somebody':
+	  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+	                                 Dload  Upload   Total   Spent    Left  Speed
+	100   469  100   469    0     0   1486      0 --:--:-- --:--:-- --:--:--  1488
+	\$
+
+	To get all the data for sensor holt-46, between 2018-01-01 and
+	2019-01-01 (note use of UTC and quoting of queries):
+
+	\$ $OPTPNAME -u somebody -d ithaca-power -s ithaca-power \\
+	    -q 'mean("powerUsed") * 2.5 as "powerUsed"' \\
+	    -w '("devID" = '\''holt-46'\'') AND time >= '\''2018-01-01T04:00:00Z'\'' AND time < '\''2019-01-01T04:00:00Z'\' \\
+	    -g 'time(1ms), "devID"' > /tmp/data.json -v
+	get-influxdb-data.sh: curl -G --basic --user somebody https://ithaca-power.mcci.com/influxdb:8086/query?pretty=true --data-urlencode db=ithaca-power --data-urlencode q=SELECT mean("powerUsed") * 2.5 as "powerUsed" from "ithaca-power" where ("devID" = 'holt-46') AND time >= '2018-01-01T04:00:00Z' AND time < '2019-01-01T04:00:00Z' GROUP BY time(1ms), "devID" fill(none)
+	  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+	                                 Dload  Upload   Total   Spent    Left  Speed
+	100 10.0M    0 10.0M    0     0  1341k      0 --:--:--  0:00:07 --:--:-- 1762k
+	\$
 .
 }
 
