@@ -197,7 +197,7 @@ function _expandquery {
 		awk 'BEGIN { FS=","; OFS="," }
 		     { for (i=1; i <= NF; ++i)
 		     	{
-			if ($i ~ /^[a-zA-Z0-9_-]+$/)
+			if ($i ~ /^[a-zA-Z0-9_.-]+$/)
 				$i = "mean(\"" $i "\") as \"" $i "\""
 		     	}
 			print;
