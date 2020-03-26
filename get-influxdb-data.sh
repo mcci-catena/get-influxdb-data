@@ -44,13 +44,14 @@ typeset -r INFLUXDB_QUERY_WHERE_DFLT='time > now() - 1d'
 typeset -r INFLUXDB_QUERY_GROUP_DFLT='time(1ms), "displayName"'
 typeset -r INFLUXDB_QUERY_FILL_DFLT="none"
 typeset -i DAYS_DFLT=1
+typeset -r OUTPUTFILE_DFLT="/dev/stdout"
 
 #### argument scanning:  usage ####
-typeset -r USAGE="${PNAME} -[Dhpv d* f* g* q* S* s* t* u* w*]"
+typeset -r USAGE="${PNAME} -[Dhpv d* f* g* o* q* S* s* t* u* w*]"
 
 # produce the help message.
 function _help {
-	more 1>&2 <<.
+	less 1>&2 <<.
 
 Name:	$OPTPNAME
 
@@ -78,6 +79,8 @@ Options:
 	-g {group}	the group clause. Default is $INFLUXDB_QUERY_GROUP_DFLT.
 
 	-p		pretty-print the output; -np minifies the output.
+
+	-o {file}	Specify output file; default is $OUPUTFILE_DFLT.
 
 	-q {vars}	the variables to query. Default is:
 
@@ -136,9 +139,10 @@ typeset INFLUXDB_QUERY_GROUP="$INFLUXDB_QUERY_GROUP_DFLT"
 typeset INFLUXDB_QUERY_VARS="$INFLUXDB_QUERY_VARS_DFLT"
 typeset INFLUXDB_QUERY_WHERE="$INFLUXDB_QUERY_WHERE_DFLT"
 typeset -i DAYS=$DAYS_DFLT
+typeset OUTPUTFILE="$OUTPUTFILE_DFLT"
 
 typeset -i NEXTBOOL=1
-while getopts hvnDd:f:g:pq:S:s:t:u:w: c
+while getopts hvnDd:f:g:o:pq:S:s:t:u:w: c
 do
 	if [ $NEXTBOOL -eq -1 ]; then
 		NEXTBOOL=0
@@ -160,6 +164,7 @@ do
 	d)	INFLUXDB_DB="$OPTARG";;
 	f)	INFLUXDB_QUERY_FILL="$OPTARG";;
 	g)	INFLUXDB_QUERY_GROUP="$OPTARG";;
+	o)	OUTPUTFILE="$OPTARG";;
 	p)	PRETTY=$NEXTBOOL;;
 	q)	INFLUXDB_QUERY_VARS="$OPTARG";;
 	S)	INFLUXDB_SERVER="$OPTARG";;
@@ -217,12 +222,12 @@ else
 fi
 
 typeset QUERY_STRING='SELECT '"${QUERY_VAR_STRING}"' from "'"${INFLUXDB_SERIES}"'" where '"${INFLUXDB_QUERY_WHERE}"' GROUP BY '"${INFLUXDB_QUERY_GROUP}${QUERY_FILL_STRING}" || _fatal "_expandquery failed"
-_verbose curl -G --basic --user "${INFLUXDB_USER}" \
+_verbose winpty curl -G --basic --user "${INFLUXDB_USER}" -o "$OUTPUTFILE" \
 	"https://${INFLUXDB_SERVER}/influxdb:8086/query?${INFLUXDB_OPTPRETTY}" \
 	--data-urlencode "db=${INFLUXDB_DB}" \
-	--data-urlencode "q=$QUERY_STRING"
+	--data-urlencode "q=$QUERY_STRING" 
 
-curl -G --basic --user "${INFLUXDB_USER}" \
+winpty curl -G --basic --user "${INFLUXDB_USER}" -o "$OUTPUTFILE" \
 	"https://${INFLUXDB_SERVER}/influxdb:8086/query?${INFLUXDB_OPTPRETTY}" \
 	--data-urlencode "db=${INFLUXDB_DB}" \
 	--data-urlencode "q=$QUERY_STRING"
