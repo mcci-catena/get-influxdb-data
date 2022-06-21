@@ -86,7 +86,7 @@ Options:
 
 	-S {fqdn}	domain name of server; default is $INFLUXDB_SERVER_DFLT.
 
-	-s {series}	data series name; default is $INFLUXDB_SERIES_DFLT
+	-s {measurement} measurement series name; default is $INFLUXDB_SERIES_DFLT
 
 	-t {days}	how many days to look back. Default is $DAYS_DFLT
 
