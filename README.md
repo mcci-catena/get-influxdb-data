@@ -133,3 +133,11 @@ get-influxdb-data.sh -S myserver.example.com -u apikey1 -d mydatabase -s data -t
 ```
 
 You will get a summary of the temperatures & humidities for each sensor, averaged per day.
+
+To get a whole bunch of data (all the points, without averaging or anything):
+
+```bash
+./get-influxdb-data.sh -S medicinespring.ddns.net -u apikey1 -d medicinespring -s data -t 1 -q "humidity,temperature" -g 'time(1ms),"device_id"' > /tmp/junk.json
+```
+
+(This puts the data into a temporary file for later use. You might want to pipe it to python instead, or the json-aware tool of your choice.)
