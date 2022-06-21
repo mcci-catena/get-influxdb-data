@@ -43,6 +43,7 @@ typeset -r INFLUXDB_QUERY_VARS_DFLT='t,rh,tDew,mean("tHeatData") as "tHeatIndex"
 typeset -r INFLUXDB_QUERY_WHERE_DFLT='time > now() - 1d'
 typeset -r INFLUXDB_QUERY_GROUP_DFLT='time(1ms), "displayName"'
 typeset -r INFLUXDB_QUERY_FILL_DFLT="none"
+typeset -r MORE=less
 typeset -i DAYS_DFLT=1
 
 #### argument scanning:  usage ####
@@ -50,7 +51,7 @@ typeset -r USAGE="${PNAME} -[Dhpv d* f* g* q* S* s* t* u* w*]"
 
 # produce the help message.
 function _help {
-	more 1>&2 <<.
+	$MORE 1>&2 <<.
 
 Name:	$OPTPNAME
 
@@ -61,7 +62,7 @@ Usage:
 	$USAGE
 
 Operation:
-	A query is constructed and sent to the server, and data is returned.
+	A query is constructed and sent to the server, and data is returned to stdout.
 
 Options:
 	-h		displays help (this message), and exits.
