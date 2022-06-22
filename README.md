@@ -4,13 +4,13 @@ This repository has a shell script that fetches recorded IoT data from an Influx
 
 ## Introduction
 
-InfluxDB is a nice way to collect data from an IoT system using The Things Network or other LoRaWAN networks. Systems like the [docker-iot-dashboard](https://github.com/mcci-catena/docker-iot-dashboard) provide a simplified Node-RED, Influx, Graphana pipeline. Excel and G-Suite plugins are avialble for pulling data from Influx into a spreadsheet.
+InfluxDB is a nice way to collect data from an IoT system using The Things Network or other LoRaWAN networks. Systems like the [docker-iot-dashboard](https://github.com/mcci-catena/docker-iot-dashboard) provide a simplified Node-RED, Influx, Graphana pipeline. Excel and G-Suite plugins are available for pulling data from Influx into a spreadsheet.
 
-However, the combination Graphana + InfluxDB is often inconvenient for processing data, becuase you have to work through Graphana. Not only is there minimal automation in the UI,Graphana pre-processes the data for display -- what you get is the graph data, not the original data.
+However, the combination Graphana + InfluxDB is often inconvenient for processing data, because you have to work through Graphana. Not only is there minimal automation in the UI,Graphana pre-processes the data for display -- what you get is the graph data, not the original data.
 
-Sometimes you need a scriptable method for getting data into a file, so you cna process it yourself to get reports or extract information in ways that Graphana can't. This script can sit at the head of your data pipeline, pulling the primary data from InfluxDB for further processing by your other scripts.
+Sometimes you need a scriptable method for getting data into a file, so you can process it yourself to get reports or extract information in ways that Graphana can't. This script can sit at the head of your data pipeline, pulling the primary data from InfluxDB for further processing by your other scripts.
 
-This script is not very general purpose. Advance programmers may find that a full Python API library is more convenient and flexible, and it doesn't requrie that you fire up Python program just to get your data. You can get your data, then do your Python magic on the local copy.
+This script is not very general purpose. Advance programmers may find that a full Python API library is more convenient and flexible, and it doesn't require that you fire up Python program just to get your data. You can get your data, then do your Python magic on the local copy.
 
 ## Some practical details
 
@@ -36,7 +36,7 @@ This script needs a lot of information about your database to do its work. You n
 
 1. The fully-qualified internet address of your influxdb server, e.g. `myserver.example.com`.
 
-2. A login that will let you get data. If you're using the [docker-iot-dashboard](https://github.com/mcci-catena/docker-iot-dashboard), and you followed the setup instructions, you should have a couple of "api key" logins. Normally they're something like `apikey1`, `apikey2`, etc. You should also have the corresponding passwords.
+2. A login that will let you get data. If you're using the [docker-iot-dashboard](https://github.com/mcci-catena/docker-iot-dashboard), and you followed the setup instructions, you should have a couple of "API key" logins. Normally they're something like `apikey1`, `apikey2`, etc. You should also have the corresponding passwords.
 
    * if you have lost these, then you need to login to the nginx container and add one or more keys. For example:
 
@@ -53,7 +53,7 @@ This script needs a lot of information about your database to do its work. You n
       $
       ```
 
-     Don't forget to record the password for the api key.
+     Don't forget to record the password for the API key.
 
 3. The name of your database on the influxdb server.
 
@@ -123,7 +123,7 @@ This script needs a lot of information about your database to do its work. You n
    >
    ```
 
-6. You need the names of the fields used to identify your source devices. THese are called *tag keys*. We need to use this to group the data. Again, you can ask influx.
+6. You need the names of the fields used to identify your source devices. These are called *tag keys*. We need to use this to group the data. Again, you can ask influx.
 
    ```console
    $ cd /opt/docker/{your-dashboard-directory}
@@ -160,7 +160,7 @@ To get a whole bunch of data (all the points, without averaging or anything):
 ./get-influxdb-data.sh -S medicinespring.ddns.net -u apikey1 -d medicinespring -s data -t 1 -q "humidity,temperature" -g 'time(1ms),"device_id"' > /tmp/junk.json
 ```
 
-(This puts the data into a temporary file for later use. You might want to pipe it to python instead, or the json-aware tool of your choice.)
+(This puts the data into a temporary file for later use. You might want to pipe it to python instead, or the JSON-aware tool of your choice.)
 
 ## Other things in this repo
 
@@ -168,7 +168,7 @@ The `assets` directory has a couple of scripts in MCCI's `bright` language for p
 
 ## Meta
 
-This script was written by Terry Moore as part of his activities with [The Things Network New York](https://thethings.nyc) and [The Things Netowk Ithaca](https://ttni.tech).
+This script was written by Terry Moore as part of his activities with [The Things Network New York](https://thethings.nyc) and [The Things Network Ithaca](https://ttni.tech).
 
 ### Copyright and License
 
