@@ -1,10 +1,26 @@
 # get-influxdb-data
 
-This repository has a shell script that will fetch data from an InfluxDB repository as JSON and output to stdout.
+This repository has a shell script that fetches recorded IoT data from an InfluxDB repository and output it in JSON form, either to the console or to a file.
 
-Please note that (as of this writing) this script does *not* work in Git for Windows, because of Windows PTY issues. However, it has been tested and works with Ubuntu 20.4 LTS for Windows, and on native Ubuntu. It has not been tested on macOS, but it will probably work there, as long as you have `bash` installed. 
+## Introduction
 
-If you're looking for the home page on GitHub, it's here: https://github.com/mcci-catena/get-influxdb-data.
+InfluxDB is a nice way to collect data from an IoT system using The Things Network or other LoRaWAN networks. Systems like the [docker-iot-dashboard](https://github.com/mcci-catena/docker-iot-dashboard) provide a simplified Node-RED, Influx, Graphana pipeline. Excel and G-Suite plugins are avialble for pulling data from Influx into a spreadsheet.
+
+However, the combination Graphana + InfluxDB is often inconvenient for processing data, becuase you have to work through Graphana. Not only is there minimal automation in the UI,Graphana pre-processes the data for display -- what you get is the graph data, not the original data.
+
+Sometimes you need a scriptable method for getting data into a file, so you cna process it yourself to get reports or extract information in ways that Graphana can't. This script can sit at the head of your data pipeline, pulling the primary data from InfluxDB for further processing by your other scripts.
+
+This script is not very general purpose. Advance programmers may find that a full Python API library is more convenient and flexible, and it doesn't requrie that you fire up Python program just to get your data. You can get your data, then do your Python magic on the local copy.
+
+## Some practical details
+
+You run this script on a PC or Linux machine, typically not on the server, and it produces data for local processing.
+
+It has been tested and works on native Ubuntu, and on Ubuntu 20.4 LTS for Windows. It has not been tested on macOS, but it will probably work there, as long as you have `bash` installed. 
+
+Please note that (as of this writing) this script does *not* work in Git for Windows, because of Windows PTY issues. 
+
+If you got this package as a zipfile, and you're looking for the home page on GitHub, it's here: https://github.com/mcci-catena/get-influxdb-data.
 
 To clone this using the `git` command line, use:
 
@@ -12,7 +28,11 @@ To clone this using the `git` command line, use:
 git clone https://github.com/mcci-catena/get-influxdb-data
 ```
 
-To use it, you need the following:
+This will create a directory named `get-influxdb-data` in the current directory.
+
+## What you need to get started
+
+This script needs a lot of information about your database to do its work. You need the following items.
 
 1. The fully-qualified internet address of your influxdb server, e.g. `myserver.example.com`.
 
@@ -124,7 +144,7 @@ To use it, you need the following:
 
   We'll use `device_id` in the query below.
 
-## Testing your connection
+## Testing your connection to the database
 
 Try the following:
 
@@ -141,3 +161,19 @@ To get a whole bunch of data (all the points, without averaging or anything):
 ```
 
 (This puts the data into a temporary file for later use. You might want to pipe it to python instead, or the json-aware tool of your choice.)
+
+## Other things in this repo
+
+The `assets` directory has a couple of scripts in MCCI's `bright` language for post-processing the JSON data to give reduced results. `Bright` looks a lot like Lua, with C syntax. They show simple things you can do with data fetched from the database.
+
+## Meta
+
+This script was written by Terry Moore as part of his activities with [The Things Network New York](https://thethings.nyc) and [The Things Netowk Ithaca](https://ttni.tech).
+
+### Copyright and License
+
+See [`LICENSE`](LICENSE.txt).
+
+### Support Open Source Community Networking
+
+The Things Network NY, Inc., is a 501(c)(3) public charity dedicated to creating a technical community to support teachers, students, governments, and others using a free community IoT network, [The Things Network](https://thethingsnetwork.org). Please check out [our website](https://thethings.nyc), and feel free to get involved in our activities -- even if you're not based in New York.  If you prefer to make a financial contribution, you may do so [here](https://the-things-network-new-york-inc.square.site/).
